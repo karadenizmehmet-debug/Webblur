@@ -1,0 +1,14 @@
+{
+  "name": "WebBlur — Yüz Bulanıklaştırma",
+  "short_name": "WebBlur",
+  "description": "Fotoğraflardaki yüzleri cihaz üzerinde bulanıklaştırır. Mehmet Karadeniz, 2026-2027",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "tr",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
