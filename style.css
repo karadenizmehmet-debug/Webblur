@@ -155,3 +155,8 @@ input[type=range] { width: 100%; accent-color: var(--primary); height: 28px; }
 .picker button.on { border-color: var(--primary); }
 .picker.color button { background: var(--sw); border-color: var(--line); }
 .picker.color button.on { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.ver { font-size: .7rem; font-weight: 600; color: var(--muted); vertical-align: middle; }
+.seg.dark { border-color: #334155; }
+.seg.dark button { color: #e2e8f0; }
+.seg.dark button.on { background: #818cf8; color: #0b1120; }

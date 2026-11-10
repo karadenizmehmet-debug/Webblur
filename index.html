@@ -9,14 +9,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=1.1">
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <img src="icon.svg" alt="" width="34" height="34">
     <div>
-      <h1>WebBlur</h1>
+      <h1>WebBlur <span class="ver">v1.1</span></h1>
       <p>Fotoğraflardaki yüzleri gizler: blur, mozaik, emoji</p>
     </div>
   </div>
@@ -84,7 +84,7 @@
   <button class="btn primary" id="zipBtn">Tümünü İndir (ZIP)</button>
 </footer>
 
-<div class="credit">© Mehmet Karadeniz, 2026-2027</div>
+<div class="credit">WebBlur v1.1 · © Mehmet Karadeniz, 2026-2027</div>
 
 <!-- Düzenleyici -->
 <div class="modal" id="editor" hidden>
@@ -101,6 +101,12 @@
     <div class="ed-loading" id="edLoading">Yükleniyor…</div>
   </div>
   <div class="ed-tools">
+    <div class="seg full dark" id="edModeSeg">
+      <button data-mode="blur">Blur</button>
+      <button data-mode="pixel">Mozaik</button>
+      <button data-mode="emoji">Emoji</button>
+      <button data-mode="solid">Düz renk</button>
+    </div>
     <div class="row" id="edStrengthRow">
       <label for="edStrength"><span id="edStrengthLabel">Blur derecesi</span> <b id="edStrengthVal"></b></label>
       <input id="edStrength" type="range" min="5" max="100" step="1">
@@ -119,6 +125,6 @@
 
 <script src="lib/face-api.js"></script>
 <script src="lib/jszip.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=1.1"></script>
 </body>
 </html>

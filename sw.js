@@ -1,8 +1,9 @@
 /* WebBlur çevrimdışı önbellek — Mehmet Karadeniz, 2026-2027
    Yalnızca uygulama dosyalarını önbelleğe alır; kullanıcı fotoğrafları hiçbir yere gönderilmez. */
-const CACHE = 'webblur-v2';
+const VERSION = '1.1';
+const CACHE = `webblur-v${VERSION}`;
 const ASSETS = [
-  './', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon.svg',
+  './', 'index.html', 'style.css?v=' + VERSION, 'app.js?v=' + VERSION, 'manifest.json', 'icon.svg',
   'lib/face-api.js', 'lib/jszip.min.js',
   'model/ssd_mobilenetv1_model-weights_manifest.json', 'model/ssd_mobilenetv1_model.bin',
 ];
@@ -29,7 +30,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
@@ -37,6 +38,6 @@ self.addEventListener('fetch', (e) => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request, { ignoreSearch: true }))
+      .catch(() => caches.match(e.request))
   );
 });

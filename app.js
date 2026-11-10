@@ -6,6 +6,8 @@
 */
 'use strict';
 
+const APP_VERSION = '1.1';
+
 const MODEL_URL = './model';
 const DETECT_MAX_SIDE = 1600;     // tespit için kullanılan çözünürlük
 const THUMB_MAX_SIDE = 360;       // küçük önizleme
@@ -43,7 +45,7 @@ const els = {
   edClose: $('edClose'), edPrev: $('edPrev'), edNext: $('edNext'),
   edAdd: $('edAdd'), edBoxes: $('edBoxes'), edCompare: $('edCompare'), edRemove: $('edRemove'),
   toast: $('toast'),
-  modeSeg: $('modeSeg'), emojiWrap: $('emojiWrap'), emojiRow: $('emojiRow'),
+  modeSeg: $('modeSeg'), edModeSeg: $('edModeSeg'), emojiWrap: $('emojiWrap'), emojiRow: $('emojiRow'),
   colorWrap: $('colorWrap'), colorRow: $('colorRow'), shapeRow: $('shapeRow'),
   strengthRow: $('strengthRow'), strengthLabel: $('strengthLabel'),
   edStrengthRow: $('edStrengthRow'), edStrengthLabel: $('edStrengthLabel'),
@@ -76,6 +78,9 @@ function syncSettingsUI() {
   els.thresholdVal.textContent = `%${s.threshold}`;
   for (const b of els.shapeSeg.querySelectorAll('button')) {
     b.classList.toggle('on', b.dataset.shape === s.shape);
+  }
+  for (const b of els.edModeSeg.querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.mode === s.mode);
   }
   for (const b of els.modeSeg.querySelectorAll('button')) {
     b.classList.toggle('on', b.dataset.mode === s.mode);
@@ -767,10 +772,12 @@ function bindEvents() {
     if (b) setSetting('shape', b.dataset.shape);
   });
 
-  els.modeSeg.addEventListener('click', (e) => {
+  const onMode = (e) => {
     const b = e.target.closest('button');
     if (b) setSetting('mode', b.dataset.mode);
-  });
+  };
+  els.modeSeg.addEventListener('click', onMode);
+  els.edModeSeg.addEventListener('click', onMode);
   els.emojiRow.addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (b) setSetting('emoji', b.dataset.emoji);
@@ -839,7 +846,7 @@ function init() {
   updateLayout();
   loadModel();
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* çevrimdışı önbellek opsiyonel */ });
+    navigator.serviceWorker.register(`sw.js?v=${APP_VERSION}`).catch(() => { /* çevrimdışı önbellek opsiyonel */ });
   }
 }
 
