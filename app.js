@@ -1,5 +1,5 @@
 /*
-  WebBlur — fotoğraflardaki yüzleri cihaz üzerinde bulanıklaştırır.
+  WebBlur — fotoğraflardaki yüzleri cihaz üzerinde gizler (blur, mozaik, emoji, düz renk).
   Fotoğraflar hiçbir sunucuya gönderilmez: yüz tespiti (face-api / SSD MobileNet)
   ve bulanıklaştırma tarayıcıda yapılır.
   Mehmet Karadeniz, 2026-2027
@@ -15,7 +15,14 @@ const MIN_SCORE_STORED = 0.2;     // bu skorun altı hiç saklanmaz
 const JPEG_QUALITY = 0.92;
 const SETTINGS_KEY = 'webblur.settings';
 
-const DEFAULT_SETTINGS = { strength: 30, padding: 20, threshold: 45, shape: 'ellipse' };
+const DEFAULT_SETTINGS = {
+  strength: 30, padding: 20, threshold: 45, shape: 'ellipse',
+  mode: 'blur', emoji: '😊', color: '#111827',
+};
+const EMOJIS = ['😊', '🙂', '😄', '😎', '😇', '🤩', '🥳', '🤓', '🐱', '🐶', '🐼', '⭐', '❤️', '🌸'];
+const MIX = 'mix';
+const COLORS = ['#111827', '#ffffff', '#4f46e5', '#16a34a', '#f59e0b', '#ec4899'];
+const STRENGTH_LABEL = { blur: 'Blur derecesi', pixel: 'Mozaik boyutu' };
 
 const state = {
   photos: [],
@@ -36,6 +43,10 @@ const els = {
   edClose: $('edClose'), edPrev: $('edPrev'), edNext: $('edNext'),
   edAdd: $('edAdd'), edBoxes: $('edBoxes'), edCompare: $('edCompare'), edRemove: $('edRemove'),
   toast: $('toast'),
+  modeSeg: $('modeSeg'), emojiWrap: $('emojiWrap'), emojiRow: $('emojiRow'),
+  colorWrap: $('colorWrap'), colorRow: $('colorRow'), shapeRow: $('shapeRow'),
+  strengthRow: $('strengthRow'), strengthLabel: $('strengthLabel'),
+  edStrengthRow: $('edStrengthRow'), edStrengthLabel: $('edStrengthLabel'),
 };
 
 /* ---------- Ayarlar ---------- */
@@ -66,6 +77,34 @@ function syncSettingsUI() {
   for (const b of els.shapeSeg.querySelectorAll('button')) {
     b.classList.toggle('on', b.dataset.shape === s.shape);
   }
+  for (const b of els.modeSeg.querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.mode === s.mode);
+  }
+  for (const b of els.emojiRow.querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.emoji === s.emoji);
+  }
+  for (const b of els.colorRow.querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.color === s.color);
+  }
+  const hasStrength = s.mode in STRENGTH_LABEL;
+  els.strengthRow.hidden = !hasStrength;
+  els.edStrengthRow.hidden = !hasStrength;
+  if (hasStrength) {
+    els.strengthLabel.textContent = STRENGTH_LABEL[s.mode];
+    els.edStrengthLabel.textContent = STRENGTH_LABEL[s.mode];
+  }
+  els.emojiWrap.hidden = s.mode !== 'emoji';
+  els.colorWrap.hidden = s.mode !== 'solid';
+  els.shapeRow.hidden = s.mode === 'emoji';
+}
+
+function buildPickers() {
+  els.emojiRow.innerHTML = [...EMOJIS, MIX]
+    .map((e) => `<button type="button" data-emoji="${e}" title="${e === MIX ? 'Karışık' : e}">${e === MIX ? '🔀' : e}</button>`)
+    .join('');
+  els.colorRow.innerHTML = COLORS
+    .map((c) => `<button type="button" data-color="${c}" style="--sw:${c}" aria-label="${c}"></button>`)
+    .join('');
 }
 
 function setSetting(key, value) {
@@ -191,31 +230,90 @@ function drawMask(tctx, cx, cy, bw, bh) {
   tctx.globalCompositeOperation = 'source-over';
 }
 
-/** source ölçeğinde (W×H) bir tuvale yüzleri bulanık çizer. */
+function pixelateInto(tctx, source, sx, sy, sw, sh, block) {
+  const tw = tctx.canvas.width;
+  const th = tctx.canvas.height;
+  const small = document.createElement('canvas');
+  small.width = Math.max(1, Math.round(tw / block));
+  small.height = Math.max(1, Math.round(th / block));
+  const sctx = small.getContext('2d');
+  sctx.imageSmoothingQuality = 'high';
+  sctx.drawImage(source, sx, sy, sw, sh, 0, 0, small.width, small.height);
+  tctx.imageSmoothingEnabled = false;
+  tctx.drawImage(small, 0, 0, tw, th);
+  tctx.imageSmoothingEnabled = true;
+}
+
+function pickEmoji(face) {
+  if (state.settings.emoji !== MIX) return state.settings.emoji;
+  return EMOJIS[(face.k ?? 0) % EMOJIS.length];
+}
+
+function drawEmoji(ctx, emoji, cx, cy, bw, bh) {
+  const size = Math.max(bw, bh) * 0.98;
+  ctx.save();
+  ctx.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  const m = ctx.measureText(emoji);
+  const asc = m.actualBoundingBoxAscent || size * 0.8;
+  const desc = m.actualBoundingBoxDescent || size * 0.2;
+  const left = m.actualBoundingBoxLeft ?? m.width / 2;
+  const right = m.actualBoundingBoxRight ?? m.width / 2;
+  ctx.fillText(emoji, cx + (left - right) / 2, cy + (asc - desc) / 2);
+  ctx.restore();
+}
+
+function drawSolid(ctx, cx, cy, bw, bh) {
+  ctx.save();
+  ctx.fillStyle = state.settings.color;
+  ctx.beginPath();
+  if (state.settings.shape === 'rect') ctx.rect(cx - bw / 2, cy - bh / 2, bw, bh);
+  else ctx.ellipse(cx, cy, bw / 2, bh / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Bulanık / mozaik: yüz bölgesini geçici tuvalde işleyip maskeyle geri koyar. */
+function drawFiltered(ctx, tctx, source, region, W, H, kx, ky) {
+  const { cx, cy, bw, bh } = region;
+  const pixel = state.settings.mode === 'pixel';
+  const r = blurRadius(bw, bh);
+  const margin = pixel ? 2 : r * 2.5;
+  const x0 = Math.max(0, Math.floor(cx - bw / 2 - margin));
+  const y0 = Math.max(0, Math.floor(cy - bh / 2 - margin));
+  const x1 = Math.min(W, Math.ceil(cx + bw / 2 + margin));
+  const y1 = Math.min(H, Math.ceil(cy + bh / 2 + margin));
+  if (x1 - x0 < 2 || y1 - y0 < 2) return;
+
+  tctx.canvas.width = x1 - x0;
+  tctx.canvas.height = y1 - y0;
+  const args = [source, x0 * kx, y0 * ky, (x1 - x0) * kx, (y1 - y0) * ky];
+  if (pixel) {
+    const block = Math.max(3, Math.min(bw, bh) * (state.settings.strength / 100) * 0.3);
+    pixelateInto(tctx, ...args, block);
+  } else {
+    blurInto(tctx, ...args, r);
+  }
+  drawMask(tctx, cx - x0, cy - y0, bw, bh);
+  ctx.drawImage(tctx.canvas, x0, y0);
+}
+
+/** source ölçeğinde (W×H) bir tuvale yüzleri seçili yöntemle gizleyerek çizer. */
 function renderBlurred(ctx, source, W, H, faces) {
   ctx.drawImage(source, 0, 0, W, H);
   const srcSize = sizeOf(source);
   const kx = srcSize.w / W;
   const ky = srcSize.h / H;
-  const tmp = document.createElement('canvas');
-  const tctx = tmp.getContext('2d');
+  const tctx = document.createElement('canvas').getContext('2d');
+  const mode = state.settings.mode;
 
   for (const face of faces) {
     if (!face.on) continue;
-    const { cx, cy, bw, bh } = faceRegion(face, W, H);
-    const r = blurRadius(bw, bh);
-    const margin = r * 2.5;
-    const x0 = Math.max(0, Math.floor(cx - bw / 2 - margin));
-    const y0 = Math.max(0, Math.floor(cy - bh / 2 - margin));
-    const x1 = Math.min(W, Math.ceil(cx + bw / 2 + margin));
-    const y1 = Math.min(H, Math.ceil(cy + bh / 2 + margin));
-    if (x1 - x0 < 2 || y1 - y0 < 2) continue;
-
-    tmp.width = x1 - x0;
-    tmp.height = y1 - y0;
-    blurInto(tctx, source, x0 * kx, y0 * ky, (x1 - x0) * kx, (y1 - y0) * ky, r);
-    drawMask(tctx, cx - x0, cy - y0, bw, bh);
-    ctx.drawImage(tmp, x0, y0);
+    const region = faceRegion(face, W, H);
+    if (mode === 'emoji') drawEmoji(ctx, pickEmoji(face), region.cx, region.cy, region.bw, region.bh);
+    else if (mode === 'solid') drawSolid(ctx, region.cx, region.cy, region.bw, region.bh);
+    else drawFiltered(ctx, tctx, source, region, W, H, kx, ky);
   }
 }
 
@@ -289,7 +387,9 @@ async function detectFaces(canvas) {
       }
     }
   }
-  return mergeDetections(found).map((f) => ({ ...f, on: true, manual: false }));
+  return mergeDetections(found)
+    .sort((a, b) => a.x - b.x)
+    .map((f) => ({ ...f, on: true, manual: false, k: newFaceKey() }));
 }
 
 function enqueueDetect(photo) {
@@ -320,6 +420,8 @@ async function runDetect(photo) {
 /* ---------- Fotoğraf listesi ---------- */
 
 let nextId = 1;
+let faceKey = 0;
+const newFaceKey = () => faceKey++;
 
 async function addFiles(files) {
   const images = [...files].filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name));
@@ -369,7 +471,7 @@ function renderTile(photo) {
   spin.textContent = labels[photo.status] || '';
   const n = activeFaces(photo).filter((f) => f.on).length;
   badge.hidden = photo.status !== 'hazır';
-  badge.textContent = n ? `${n} yüz bulanık` : 'Yüz bulunamadı';
+  badge.textContent = n ? `${n} yüz gizlendi` : 'Yüz bulunamadı';
   badge.classList.toggle('warn', n === 0);
 }
 
@@ -514,10 +616,10 @@ function setupEditorPointer() {
     if (ed.addMode) {
       if (moved) {
         const box = boxFrom(start, p);
-        if (box.w > 0.01 && box.h > 0.01) photo.faces.push({ ...box, score: 1, on: true, manual: true });
+        if (box.w > 0.01 && box.h > 0.01) photo.faces.push({ ...box, score: 1, on: true, manual: true, k: newFaceKey() });
       } else {
         const s = defaultBoxSize(photo);
-        photo.faces.push({ x: p.x - s.w / 2, y: p.y - s.h / 2, w: s.w, h: s.h, score: 1, on: true, manual: true });
+        photo.faces.push({ x: p.x - s.w / 2, y: p.y - s.h / 2, w: s.w, h: s.h, score: 1, on: true, manual: true, k: newFaceKey() });
       }
     } else if (!moved) {
       toggleFaceAt(photo, p);
@@ -665,6 +767,19 @@ function bindEvents() {
     if (b) setSetting('shape', b.dataset.shape);
   });
 
+  els.modeSeg.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) setSetting('mode', b.dataset.mode);
+  });
+  els.emojiRow.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) setSetting('emoji', b.dataset.emoji);
+  });
+  els.colorRow.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) setSetting('color', b.dataset.color);
+  });
+
   els.zipBtn.addEventListener('click', downloadZip);
   els.shareBtn.addEventListener('click', shareFiles);
   els.clearBtn.addEventListener('click', () => {
@@ -718,6 +833,7 @@ function init() {
       els.shareBtn.hidden = !navigator.canShare({ files: [probe] });
     } catch { /* paylaşım yok */ }
   }
+  buildPickers();
   syncSettingsUI();
   bindEvents();
   updateLayout();

@@ -6,7 +6,8 @@ Fotoğraflar hiçbir sunucuya yüklenmez; yüz tespiti ve bulanıklaştırma tar
 ## Özellikler
 - Birden fazla fotoğrafı aynı anda ekleme
 - Otomatik yüz tespiti (SSD MobileNet, kalabalık fotoğraflar için parçalı tarama)
-- Blur derecesi, kenar payı, tespit hassasiyeti ve şekil (oval / dikdörtgen) ayarı — önce veya sonra değiştirilebilir, önizleme anında güncellenir
+- Gizleme türü: Blur, Mozaik, Emoji (tek veya her yüze farklı), Düz renk
+- Blur/mozaik derecesi, kenar payı, tespit hassasiyeti ve şekil (oval / dikdörtgen) ayarı — önce veya sonra değiştirilebilir, önizleme anında güncellenir
 - Fotoğrafa dokunup tek tek yüzü açma/kapatma, elle bölge ekleme, önce/sonra karşılaştırma
 - Toplu indirme (ZIP) veya telefonda Paylaş / Kaydet
 - Çıktıda EXIF/konum bilgisi bulunmaz

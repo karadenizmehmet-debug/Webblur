@@ -17,7 +17,7 @@
     <img src="icon.svg" alt="" width="34" height="34">
     <div>
       <h1>WebBlur</h1>
-      <p>Fotoğraflardaki yüzleri hafifçe bulanıklaştırır</p>
+      <p>Fotoğraflardaki yüzleri gizler: blur, mozaik, emoji</p>
     </div>
   </div>
   <div class="privacy" title="Fotoğraflar hiçbir sunucuya gönderilmez; tüm işlem bu cihazda yapılır.">🔒 Fotoğraflar cihazdan çıkmaz</div>
@@ -31,8 +31,25 @@
   </section>
 
   <section class="settings card">
-    <div class="row">
-      <label for="strength">Blur derecesi <b id="strengthVal"></b></label>
+    <div class="row wide">
+      <span class="lbl">Gizleme türü</span>
+      <div class="seg full" id="modeSeg">
+        <button data-mode="blur">Blur</button>
+        <button data-mode="pixel">Mozaik</button>
+        <button data-mode="emoji">Emoji</button>
+        <button data-mode="solid">Düz renk</button>
+      </div>
+    </div>
+    <div class="row wide" id="emojiWrap" hidden>
+      <span class="lbl">Emoji <small>(🔀 her yüze farklı)</small></span>
+      <div class="picker emoji" id="emojiRow"></div>
+    </div>
+    <div class="row wide" id="colorWrap" hidden>
+      <span class="lbl">Renk</span>
+      <div class="picker color" id="colorRow"></div>
+    </div>
+    <div class="row" id="strengthRow">
+      <label for="strength"><span id="strengthLabel">Blur derecesi</span> <b id="strengthVal"></b></label>
       <input id="strength" type="range" min="5" max="100" step="1">
     </div>
     <div class="row">
@@ -44,7 +61,7 @@
       <input id="threshold" type="range" min="20" max="80" step="1">
       <small>Sola çekince daha çok yüz bulunur (hatalı tespit artabilir).</small>
     </div>
-    <div class="row inline">
+    <div class="row inline" id="shapeRow">
       <span>Şekil</span>
       <div class="seg" id="shapeSeg">
         <button data-shape="ellipse">Oval</button>
@@ -84,8 +101,8 @@
     <div class="ed-loading" id="edLoading">Yükleniyor…</div>
   </div>
   <div class="ed-tools">
-    <div class="row">
-      <label for="edStrength">Blur derecesi <b id="edStrengthVal"></b></label>
+    <div class="row" id="edStrengthRow">
+      <label for="edStrength"><span id="edStrengthLabel">Blur derecesi</span> <b id="edStrengthVal"></b></label>
       <input id="edStrength" type="range" min="5" max="100" step="1">
     </div>
     <div class="ed-btns">
@@ -94,7 +111,7 @@
       <button class="btn" id="edCompare">Önce / Sonra</button>
       <button class="btn danger" id="edRemove">Fotoğrafı çıkar</button>
     </div>
-    <small id="edHelp">Yeşil kutuya dokun: o yüzün blurunu aç/kapat. Elle ekleme modunda parmağınla kutu çiz.</small>
+    <small id="edHelp">Yeşil kutuya dokun: o yüzü gizle/göster. Elle ekleme modunda parmağınla kutu çiz.</small>
   </div>
 </div>
 
