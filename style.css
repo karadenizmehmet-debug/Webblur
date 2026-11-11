@@ -121,8 +121,8 @@ input[type=range] { width: 100%; accent-color: var(--primary); height: 28px; }
   font: inherit; font-size: 1.3rem; width: 42px; height: 42px; border-radius: 50%;
   border: 0; background: rgba(255,255,255,.12); color: #fff; cursor: pointer;
 }
-.ed-stage { flex: 1; min-height: 0; display: grid; place-items: center; position: relative; padding: 4px; }
-.ed-stage canvas { max-width: 100%; max-height: 100%; touch-action: none; display: block; }
+.ed-stage { flex: 1; min-height: 0; display: grid; place-items: center; position: relative; padding: 4px; overflow: hidden; touch-action: none; }
+.ed-stage canvas { max-width: 100%; max-height: 100%; touch-action: none; display: block; transform-origin: 0 0; will-change: transform; }
 .ed-loading { position: absolute; font-size: .9rem; opacity: .8; }
 .ed-tools {
   background: #0f172a; padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
@@ -160,3 +160,16 @@ input[type=range] { width: 100%; accent-color: var(--primary); height: 28px; }
 .seg.dark { border-color: #334155; }
 .seg.dark button { color: #e2e8f0; }
 .seg.dark button.on { background: #818cf8; color: #0b1120; }
+
+.ed-zoom {
+  position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 4px;
+  background: rgba(15, 23, 42, .75); border-radius: 99px; padding: 4px;
+}
+.icon.sm { width: 36px; height: 36px; font-size: 1.2rem; }
+.zlabel {
+  font: inherit; font-size: .78rem; font-weight: 600; color: #e2e8f0; background: transparent;
+  border: 0; min-width: 48px; cursor: pointer;
+}
+.ed-hist { display: flex; gap: 6px; }
+.ed-hist .btn { flex: 1; background: #1e293b; color: #e2e8f0; border-color: #334155; font-size: .82rem; padding: 9px 6px; }
+.ed-hist .btn.danger { color: #fca5a5; }

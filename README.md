@@ -1,4 +1,4 @@
-# WebBlur v1.1
+# WebBlur v1.2
 
 Fotoğraflardaki yüzleri **cihaz üzerinde** bulanıklaştıran web uygulaması.
 Fotoğraflar hiçbir sunucuya yüklenmez; yüz tespiti ve bulanıklaştırma tarayıcıda yapılır.
@@ -17,6 +17,7 @@ Fotoğraflar hiçbir sunucuya yüklenmez; yüz tespiti ve bulanıklaştırma tar
 GitHub Pages üzerinden açın: Settings → Pages → Branch: `main` / root.
 
 ## Sürümler
+- **v1.2** — Düzenleyicide geri al / ileri al, yakınlaştırma (iki parmak, tekerlek, +/− düğmeleri), Tümünü kaldır / geri getir
 - **v1.1** — Gizleme türleri (Blur, Mozaik, Emoji, Düz renk); düzenleyicide tür seçimi; önbellek düzeltmesi
 - **v1.0** — İlk sürüm: toplu yüz bulanıklaştırma, ZIP indirme
 

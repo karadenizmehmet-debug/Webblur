@@ -6,7 +6,7 @@
 */
 'use strict';
 
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 
 const MODEL_URL = './model';
 const DETECT_MAX_SIDE = 1600;     // tespit için kullanılan çözünürlük
@@ -31,7 +31,7 @@ const state = {
   settings: loadSettings(),
   modelReady: false,
   queue: Promise.resolve(),
-  editor: { index: -1, source: null, addMode: false, showBoxes: true, compare: false },
+  editor: { index: -1, source: null, addMode: false, showBoxes: true, compare: false, zoom: 1, tx: 0, ty: 0 },
 };
 
 const $ = (id) => document.getElementById(id);
@@ -43,7 +43,8 @@ const els = {
   editor: $('editor'), edCanvas: $('edCanvas'), edTitle: $('edTitle'), edLoading: $('edLoading'),
   edStrength: $('edStrength'), edStrengthVal: $('edStrengthVal'),
   edClose: $('edClose'), edPrev: $('edPrev'), edNext: $('edNext'),
-  edAdd: $('edAdd'), edBoxes: $('edBoxes'), edCompare: $('edCompare'), edRemove: $('edRemove'),
+  edAdd: $('edAdd'), edUndo: $('edUndo'), edRedo: $('edRedo'), edClearAll: $('edClearAll'),
+  edStage: $('edStage'), edZoomIn: $('edZoomIn'), edZoomOut: $('edZoomOut'), edZoomReset: $('edZoomReset'), edBoxes: $('edBoxes'), edCompare: $('edCompare'), edRemove: $('edRemove'),
   toast: $('toast'),
   modeSeg: $('modeSeg'), edModeSeg: $('edModeSeg'), emojiWrap: $('emojiWrap'), emojiRow: $('emojiRow'),
   colorWrap: $('colorWrap'), colorRow: $('colorRow'), shapeRow: $('shapeRow'),
@@ -431,7 +432,7 @@ const newFaceKey = () => faceKey++;
 async function addFiles(files) {
   const images = [...files].filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name));
   for (const file of images) {
-    const photo = { id: nextId++, file, name: file.name, faces: [], status: 'bekliyor', thumb: null, tile: null };
+    const photo = { id: nextId++, file, name: file.name, faces: [], status: 'bekliyor', thumb: null, tile: null, undo: [], redo: [] };
     state.photos.push(photo);
     createTile(photo);
     try {
@@ -476,7 +477,7 @@ function renderTile(photo) {
   spin.textContent = labels[photo.status] || '';
   const n = activeFaces(photo).filter((f) => f.on).length;
   badge.hidden = photo.status !== 'hazır';
-  badge.textContent = n ? `${n} yüz gizlendi` : 'Yüz bulunamadı';
+  badge.textContent = n ? `${n} yüz gizlendi` : (activeFaces(photo).length ? 'Kapama kaldırıldı' : 'Yüz bulunamadı');
   badge.classList.toggle('warn', n === 0);
 }
 
@@ -518,6 +519,7 @@ async function openEditor(index) {
   ed.index = index;
   ed.compare = false;
   els.edCompare.classList.remove('active');
+  resetZoom();
   els.editor.hidden = false;
   document.body.style.overflow = 'hidden';
   const photo = state.photos[index];
@@ -537,6 +539,7 @@ async function openEditor(index) {
   }
   els.edLoading.hidden = true;
   redrawEditor();
+  resetZoom();
 }
 
 function closeEditor() {
@@ -566,7 +569,7 @@ function redrawEditor(draft) {
   else renderBlurred(ctx, src, c.width, c.height, faces);
 
   if (ed.showBoxes && !ed.compare) {
-    const lw = Math.max(2, c.width / 400);
+    const lw = Math.max(1, c.width / 400 / ed.zoom);
     ctx.lineWidth = lw;
     for (const f of faces) {
       ctx.setLineDash(f.on ? [] : [lw * 3, lw * 2]);
@@ -580,6 +583,7 @@ function redrawEditor(draft) {
     ctx.strokeStyle = '#60a5fa';
     ctx.strokeRect(draft.x * c.width, draft.y * c.height, draft.w * c.width, draft.h * c.height);
   }
+  updateEditorButtons();
 }
 
 function pointerToNorm(e) {
@@ -598,47 +602,201 @@ function defaultBoxSize(photo) {
 }
 
 function setupEditorPointer() {
+  const stage = els.edStage;
   const c = els.edCanvas;
-  let start = null;
+  const pointers = new Map();
+  let gesture = null;
 
-  c.addEventListener('pointerdown', (e) => {
-    start = { ...pointerToNorm(e), px: e.clientX, py: e.clientY };
-    c.setPointerCapture(e.pointerId);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.ed-zoom')) return;
+    stage.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const ed = state.editor;
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const m = mid(a, b);
+      gesture = { type: 'pinch', d0: dist(a, b), z0: ed.zoom, m0: m };
+      redrawEditor();
+      return;
+    }
+    if (pointers.size > 2) return;
+    gesture = {
+      type: 'single', onCanvas: e.target === c, moved: false,
+      px: e.clientX, py: e.clientY, tx0: ed.tx, ty0: ed.ty,
+      start: pointerToNorm(e),
+    };
   });
 
-  c.addEventListener('pointermove', (e) => {
-    if (!start || !state.editor.addMode) return;
-    const p = pointerToNorm(e);
-    redrawEditor(boxFrom(start, p));
+  stage.addEventListener('pointermove', (e) => {
+    if (!pointers.has(e.pointerId) || !gesture) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const ed = state.editor;
+
+    if (gesture.type === 'pinch' && pointers.size >= 2) {
+      const [a, b] = [...pointers.values()];
+      const m = mid(a, b);
+      zoomAt(gesture.z0 * (dist(a, b) / gesture.d0), gesture.m0.x, gesture.m0.y);
+      // iki parmağın orta noktası kayınca görüntüyü de kaydır
+      ed.tx += m.x - gesture.m0.x;
+      ed.ty += m.y - gesture.m0.y;
+      gesture.m0 = m;
+      gesture.z0 = ed.zoom;
+      gesture.d0 = dist(a, b);
+      applyZoom();
+      return;
+    }
+    if (gesture.type !== 'single') return;
+    if (Math.hypot(e.clientX - gesture.px, e.clientY - gesture.py) > 8) gesture.moved = true;
+    if (ed.addMode && gesture.onCanvas) {
+      redrawEditor(boxFrom(gesture.start, pointerToNorm(e)));
+    } else if (gesture.moved && ed.zoom > 1) {
+      ed.tx = gesture.tx0 + (e.clientX - gesture.px);
+      ed.ty = gesture.ty0 + (e.clientY - gesture.py);
+      applyZoom();
+    }
   });
 
-  c.addEventListener('pointerup', (e) => {
-    if (!start) return;
+  const finish = (e, cancelled) => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.delete(e.pointerId);
+    const g = gesture;
+    if (g && g.type === 'pinch') {
+      // ikinci parmak kalkınca yeni tek-parmak hareketi başlamasın
+      if (pointers.size === 0) gesture = null;
+      else gesture = { type: 'ended' };
+      return;
+    }
+    gesture = pointers.size ? { type: 'ended' } : null;
+    if (!g || g.type !== 'single' || cancelled || !g.onCanvas) { redrawEditor(); return; }
+
     const ed = state.editor;
     const photo = state.photos[ed.index];
+    if (!photo) return;
     const p = pointerToNorm(e);
-    const moved = Math.hypot(e.clientX - start.px, e.clientY - start.py) > 10;
     if (ed.addMode) {
-      if (moved) {
-        const box = boxFrom(start, p);
-        if (box.w > 0.01 && box.h > 0.01) photo.faces.push({ ...box, score: 1, on: true, manual: true, k: newFaceKey() });
-      } else {
+      const box = g.moved ? boxFrom(g.start, p) : null;
+      if (box && box.w > 0.005 && box.h > 0.005) {
+        pushHistory(photo);
+        photo.faces.push({ ...box, score: 1, on: true, manual: true, k: newFaceKey() });
+      } else if (!g.moved) {
         const s = defaultBoxSize(photo);
+        pushHistory(photo);
         photo.faces.push({ x: p.x - s.w / 2, y: p.y - s.h / 2, w: s.w, h: s.h, score: 1, on: true, manual: true, k: newFaceKey() });
       }
-    } else if (!moved) {
+    } else if (!g.moved) {
       toggleFaceAt(photo, p);
     }
-    start = null;
     redrawEditor();
     renderTile(photo);
-  });
+  };
 
-  c.addEventListener('pointercancel', () => { start = null; redrawEditor(); });
+  stage.addEventListener('pointerup', (e) => finish(e, false));
+  stage.addEventListener('pointercancel', (e) => finish(e, true));
+
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomAt(state.editor.zoom * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
+  }, { passive: false });
 }
 
 function boxFrom(a, b) {
   return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) };
+}
+
+/* ---------- Geri al / ileri al ---------- */
+
+const HISTORY_LIMIT = 60;
+const snapshot = (photo) => photo.faces.map((f) => ({ ...f }));
+
+/** Yüz listesini değiştirmeden önce çağrılır. */
+function pushHistory(photo) {
+  photo.undo.push(snapshot(photo));
+  if (photo.undo.length > HISTORY_LIMIT) photo.undo.shift();
+  photo.redo.length = 0;
+}
+
+function stepHistory(from, to) {
+  const ed = state.editor;
+  const photo = state.photos[ed.index];
+  if (!photo || !photo[from].length) return;
+  photo[to].push(snapshot(photo));
+  photo.faces = photo[from].pop();
+  redrawEditor();
+  renderTile(photo);
+}
+
+const undo = () => stepHistory('undo', 'redo');
+const redo = () => stepHistory('redo', 'undo');
+
+function visibleOnCount(photo) {
+  return activeFaces(photo).filter((f) => f.on).length;
+}
+
+/** Tüm kapamaları kaldırır; hepsi zaten kaldırılmışsa geri getirir. */
+function toggleAllFaces() {
+  const photo = state.photos[state.editor.index];
+  if (!photo || !activeFaces(photo).length) return;
+  const turnOn = visibleOnCount(photo) === 0;
+  pushHistory(photo);
+  for (const f of activeFaces(photo)) f.on = turnOn;
+  redrawEditor();
+  renderTile(photo);
+}
+
+function updateEditorButtons() {
+  const photo = state.photos[state.editor.index];
+  els.edUndo.disabled = !photo || !photo.undo.length;
+  els.edRedo.disabled = !photo || !photo.redo.length;
+  const any = photo && activeFaces(photo).length > 0;
+  els.edClearAll.disabled = !any;
+  els.edClearAll.textContent = any && visibleOnCount(photo) === 0 ? 'Tümünü geri getir' : 'Tümünü kaldır';
+}
+
+/* ---------- Yakınlaştırma ---------- */
+
+const ZOOM_MIN = 1;
+const ZOOM_MAX = 8;
+
+function applyZoom() {
+  const ed = state.editor;
+  const c = els.edCanvas;
+  // Görüntü, büyütülmemiş kutusunun dışına kaçmasın
+  const w = c.offsetWidth;
+  const h = c.offsetHeight;
+  ed.tx = Math.min(0, Math.max((1 - ed.zoom) * w, ed.tx));
+  ed.ty = Math.min(0, Math.max((1 - ed.zoom) * h, ed.ty));
+  c.style.transform = ed.zoom === 1 ? '' : `translate(${ed.tx}px, ${ed.ty}px) scale(${ed.zoom})`;
+  els.edZoomReset.textContent = `%${Math.round(ed.zoom * 100)}`;
+}
+
+/** Ekrandaki (clientX, clientY) noktası sabit kalacak şekilde yakınlaştırır. */
+function zoomAt(newZoom, clientX, clientY) {
+  const ed = state.editor;
+  const r = els.edCanvas.getBoundingClientRect();
+  const baseLeft = r.left - ed.tx;
+  const baseTop = r.top - ed.ty;
+  const lx = (clientX - r.left) / ed.zoom;
+  const ly = (clientY - r.top) / ed.zoom;
+  ed.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newZoom));
+  ed.tx = clientX - baseLeft - lx * ed.zoom;
+  ed.ty = clientY - baseTop - ly * ed.zoom;
+  applyZoom();
+}
+
+function zoomCenter(factor) {
+  const r = els.edStage.getBoundingClientRect();
+  zoomAt(state.editor.zoom * factor, r.left + r.width / 2, r.top + r.height / 2);
+}
+
+function resetZoom() {
+  const ed = state.editor;
+  ed.zoom = 1;
+  ed.tx = 0;
+  ed.ty = 0;
+  applyZoom();
 }
 
 function toggleFaceAt(photo, p) {
@@ -647,7 +805,8 @@ function toggleFaceAt(photo, p) {
     .sort((a, b) => a.w * a.h - b.w * b.h);
   const f = hits[0];
   if (!f) return;
-  if (f.manual) photo.faces.splice(photo.faces.indexOf(f), 1); // elle eklenen kutu silinir
+  pushHistory(photo);
+  if (f.manual && f.on) photo.faces.splice(photo.faces.indexOf(f), 1); // elle eklenen kutu silinir
   else f.on = !f.on;
 }
 
@@ -816,8 +975,22 @@ function bindEvents() {
     closeEditor();
     removePhoto(i);
   });
+  els.edUndo.addEventListener('click', undo);
+  els.edRedo.addEventListener('click', redo);
+  els.edClearAll.addEventListener('click', toggleAllFaces);
+  els.edZoomIn.addEventListener('click', () => zoomCenter(1.5));
+  els.edZoomOut.addEventListener('click', () => zoomCenter(1 / 1.5));
+  els.edZoomReset.addEventListener('click', resetZoom);
+  window.addEventListener('resize', () => { if (state.editor.index >= 0) resetZoom(); });
+
   document.addEventListener('keydown', (e) => {
     if (state.editor.index < 0) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); (e.shiftKey ? redo : undo)(); return; }
+    if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+    if (e.key === '+' || e.key === '=') zoomCenter(1.5);
+    if (e.key === '-') zoomCenter(1 / 1.5);
+    if (e.key === '0') resetZoom();
     if (e.key === 'Escape') closeEditor();
     if (e.key === 'ArrowLeft') openEditor(state.editor.index - 1);
     if (e.key === 'ArrowRight') openEditor(state.editor.index + 1);

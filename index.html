@@ -9,14 +9,14 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=1.1">
+<link rel="stylesheet" href="style.css?v=1.2">
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <img src="icon.svg" alt="" width="34" height="34">
     <div>
-      <h1>WebBlur <span class="ver">v1.1</span></h1>
+      <h1>WebBlur <span class="ver">v1.2</span></h1>
       <p>Fotoğraflardaki yüzleri gizler: blur, mozaik, emoji</p>
     </div>
   </div>
@@ -84,7 +84,7 @@
   <button class="btn primary" id="zipBtn">Tümünü İndir (ZIP)</button>
 </footer>
 
-<div class="credit">WebBlur v1.1 · © Mehmet Karadeniz, 2026-2027</div>
+<div class="credit">WebBlur v1.2 · © Mehmet Karadeniz, 2026-2027</div>
 
 <!-- Düzenleyici -->
 <div class="modal" id="editor" hidden>
@@ -99,6 +99,11 @@
   <div class="ed-stage" id="edStage">
     <canvas id="edCanvas"></canvas>
     <div class="ed-loading" id="edLoading">Yükleniyor…</div>
+    <div class="ed-zoom">
+      <button class="icon sm" id="edZoomOut" aria-label="Uzaklaştır">−</button>
+      <button class="zlabel" id="edZoomReset" title="Sığdır">%100</button>
+      <button class="icon sm" id="edZoomIn" aria-label="Yakınlaştır">+</button>
+    </div>
   </div>
   <div class="ed-tools">
     <div class="seg full dark" id="edModeSeg">
@@ -111,13 +116,18 @@
       <label for="edStrength"><span id="edStrengthLabel">Blur derecesi</span> <b id="edStrengthVal"></b></label>
       <input id="edStrength" type="range" min="5" max="100" step="1">
     </div>
+    <div class="ed-hist">
+      <button class="btn" id="edUndo" title="Geri al (Ctrl+Z)">↶ Geri al</button>
+      <button class="btn" id="edRedo" title="İleri al (Ctrl+Y)">↷ İleri al</button>
+      <button class="btn danger" id="edClearAll">Tümünü kaldır</button>
+    </div>
     <div class="ed-btns">
       <button class="btn" id="edAdd">✚ Elle bölge ekle</button>
       <button class="btn" id="edBoxes">Kutuları gizle</button>
       <button class="btn" id="edCompare">Önce / Sonra</button>
       <button class="btn danger" id="edRemove">Fotoğrafı çıkar</button>
     </div>
-    <small id="edHelp">Yeşil kutuya dokun: o yüzü gizle/göster. Elle ekleme modunda parmağınla kutu çiz.</small>
+    <small id="edHelp">Kutuya dokun: o yüzü gizle/göster. İki parmakla yakınlaştır, tek parmakla kaydır. Elle ekleme modunda parmağınla kutu çiz.</small>
   </div>
 </div>
 
@@ -125,6 +135,6 @@
 
 <script src="lib/face-api.js"></script>
 <script src="lib/jszip.min.js"></script>
-<script src="app.js?v=1.1"></script>
+<script src="app.js?v=1.2"></script>
 </body>
 </html>
