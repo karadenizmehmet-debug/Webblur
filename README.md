@@ -17,6 +17,7 @@ Fotoğraflar hiçbir sunucuya yüklenmez; yüz tespiti ve bulanıklaştırma tar
 GitHub Pages üzerinden açın: Settings → Pages → Branch: `main` / root.
 
 ## Sürümler
+- **v1.3** — Koyu / normal mod düğmesi (varsayılan sistem ayarını izler)
 - **v1.2** — Düzenleyicide geri al / ileri al, yakınlaştırma (iki parmak, tekerlek, +/− düğmeleri), Tümünü kaldır / geri getir
 - **v1.1** — Gizleme türleri (Blur, Mozaik, Emoji, Düz renk); düzenleyicide tür seçimi; önbellek düzeltmesi
 - **v1.0** — İlk sürüm: toplu yüz bulanıklaştırma, ZIP indirme

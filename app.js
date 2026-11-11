@@ -6,7 +6,7 @@
 */
 'use strict';
 
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 
 const MODEL_URL = './model';
 const DETECT_MAX_SIDE = 1600;     // tespit için kullanılan çözünürlük
@@ -1024,3 +1024,15 @@ function init() {
 }
 
 init();
+
+// Koyu / normal mod: varsayılan sistemi izler; düğme elle seçer (webblur-tema)
+(function () {
+  const btn = document.getElementById('themeBtn'), root = document.documentElement;
+  const isDark = () => { const t = root.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+  const draw = () => { const d = isDark(), m = d ? 'Normal moda geç' : 'Koyu moda geç';
+    btn.textContent = d ? '☀️' : '🌙'; btn.title = m; btn.setAttribute('aria-label', m);
+    const mc = document.querySelector('meta[name=theme-color]'); if (mc) mc.setAttribute('content', d ? '#0b1120' : '#f1f5f9'); };
+  btn.addEventListener('click', () => { const next = isDark() ? 'light' : 'dark'; root.setAttribute('data-theme', next);
+    try { localStorage.setItem('webblur-tema', next); } catch (e) {} draw(); });
+  draw();
+})();

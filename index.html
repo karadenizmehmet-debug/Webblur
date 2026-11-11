@@ -9,18 +9,20 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=1.2">
+<script>try{var t=localStorage.getItem("webblur-tema");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="stylesheet" href="style.css?v=1.3">
 </head>
 <body>
 <header class="top">
   <div class="brand">
     <img src="icon.svg" alt="" width="34" height="34">
     <div>
-      <h1>WebBlur <span class="ver">v1.2</span></h1>
+      <h1>WebBlur <span class="ver">v1.3</span></h1>
       <p>Fotoğraflardaki yüzleri gizler: blur, mozaik, emoji</p>
     </div>
   </div>
   <div class="privacy" title="Fotoğraflar hiçbir sunucuya gönderilmez; tüm işlem bu cihazda yapılır.">🔒 Fotoğraflar cihazdan çıkmaz</div>
+  <button type="button" class="themebtn" id="themeBtn"></button>
 </header>
 
 <main>
@@ -84,7 +86,7 @@
   <button class="btn primary" id="zipBtn">Tümünü İndir (ZIP)</button>
 </footer>
 
-<div class="credit">WebBlur v1.2 · © Mehmet Karadeniz, 2026-2027</div>
+<div class="credit">WebBlur v1.3 · © Mehmet Karadeniz, 2026-2027</div>
 
 <!-- Düzenleyici -->
 <div class="modal" id="editor" hidden>
@@ -135,6 +137,6 @@
 
 <script src="lib/face-api.js"></script>
 <script src="lib/jszip.min.js"></script>
-<script src="app.js?v=1.2"></script>
+<script src="app.js?v=1.3"></script>
 </body>
 </html>

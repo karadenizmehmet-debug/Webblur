@@ -11,8 +11,9 @@
   --off: #dc2626;
   --radius: 14px;
 }
+/* Koyu mod: sistem ayarını izler; elle seçim (data-theme, anahtar webblur-tema) sistemi geçersiz kılar */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0b1120;
     --card: #131c31;
     --text: #e2e8f0;
@@ -22,6 +23,16 @@
     --primary-ink: #0b1120;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #0b1120;
+  --card: #131c31;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --line: #23314f;
+  --primary: #818cf8;
+  --primary-ink: #0b1120;
+}
+.themebtn { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 99px; width: 34px; height: 34px; font-size: 1rem; line-height: 1; cursor: pointer; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
