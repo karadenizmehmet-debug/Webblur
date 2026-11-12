@@ -1,6 +1,6 @@
 /* WebBlur çevrimdışı önbellek — Mehmet Karadeniz, 2026-2027
    Yalnızca uygulama dosyalarını önbelleğe alır; kullanıcı fotoğrafları hiçbir yere gönderilmez. */
-const VERSION = '1.3';
+const VERSION = '1.4';
 const CACHE = `webblur-v${VERSION}`;
 const ASSETS = [
   './', 'index.html', 'style.css?v=' + VERSION, 'app.js?v=' + VERSION, 'manifest.json', 'icon.svg',

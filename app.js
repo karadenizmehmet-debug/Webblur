@@ -6,7 +6,7 @@
 */
 'use strict';
 
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 
 const MODEL_URL = './model';
 const DETECT_MAX_SIDE = 1600;     // tespit için kullanılan çözünürlük

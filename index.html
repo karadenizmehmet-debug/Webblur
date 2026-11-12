@@ -17,11 +17,12 @@
   <div class="brand">
     <img src="icon.svg" alt="" width="34" height="34">
     <div>
-      <h1>WebBlur <span class="ver">v1.3</span></h1>
+      <h1>WebBlur <span class="ver">v1.4</span></h1>
       <p>Fotoğraflardaki yüzleri gizler: blur, mozaik, emoji</p>
     </div>
   </div>
   <div class="privacy" title="Fotoğraflar hiçbir sunucuya gönderilmez; tüm işlem bu cihazda yapılır.">🔒 Fotoğraflar cihazdan çıkmaz</div>
+  <button type="button" class="paylasBtn"></button>
   <button type="button" class="themebtn" id="themeBtn"></button>
 </header>
 
@@ -86,7 +87,7 @@
   <button class="btn primary" id="zipBtn">Tümünü İndir (ZIP)</button>
 </footer>
 
-<div class="credit">WebBlur v1.3 · © Mehmet Karadeniz, 2026-2027</div>
+<div class="credit">WebBlur v1.4 · © Mehmet Karadeniz, 2026-2027</div>
 
 <!-- Düzenleyici -->
 <div class="modal" id="editor" hidden>
@@ -138,5 +139,28 @@
 <script src="lib/face-api.js"></script>
 <script src="lib/jszip.min.js"></script>
 <script src="app.js?v=1.3"></script>
+<script>
+// Adres paylaş düğmesi: önce sistem paylaşımı, olmazsa adresi panoya kopyalar. Mehmet Karadeniz, 2026-2027
+(function () {
+  var SH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/></svg>';
+  var OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+  function adres() { return location.href.split(/[?#]/)[0]; }
+  function kopyala(u) {
+    try { var t = document.createElement("textarea"); t.value = u; t.style.cssText = "position:fixed;opacity:0;top:0;left:0"; document.body.appendChild(t); t.select(); var ok = document.execCommand("copy"); document.body.removeChild(t); return ok; } catch (e) { return false; }
+  }
+  function tamam(b) { b.innerHTML = OK; b.title = "Adres kopyalandı"; setTimeout(function () { b.innerHTML = SH; b.title = "Adresi paylaş"; }, 1800); }
+  function paylas(b) {
+    var u = adres();
+    if (navigator.share) { navigator.share({ title: document.title, url: u }).catch(function () {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(function () { tamam(b); }, function () { if (kopyala(u)) tamam(b); });
+    else if (kopyala(u)) tamam(b);
+  }
+  var bs = document.querySelectorAll(".paylasBtn");
+  for (var i = 0; i < bs.length; i++) {
+    bs[i].innerHTML = SH; bs[i].title = "Adresi paylaş"; bs[i].setAttribute("aria-label", "Adresi paylaş");
+    bs[i].addEventListener("click", function () { paylas(this); });
+  }
+})();
+</script>
 </body>
 </html>
